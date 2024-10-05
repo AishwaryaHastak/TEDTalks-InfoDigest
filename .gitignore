@@ -1,0 +1,6 @@
+TASKS.txt  
+ground_truth_id.ipynb
+app/src/__pycache__/ 
+app/src/src.* 
+app/temp.ipynb
+app/.env
