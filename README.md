@@ -18,7 +18,7 @@ This application utilizes the ![TED Talks dataset](https://www.kaggle.com/datase
 
 The Retrieval-Augmented Generation (RAG) flow combines a knowledge base with a language model to deliver accurate responses:
 
-- **Knowledge Base:** Contains a Data Science Q&A dataset stored in `data.csv`.
+- **Knowledge Base:** Contains a Ted Talks transcript dataset stored in `data.csv`.
 - **Language Model:** Uses **Flan-T5**, an open-source model from Google available on Hugging Face, for augmented response generation.
 
 ## 📊 Retrieval Evaluation
@@ -41,17 +41,12 @@ Detailed results can be found in the notebooks in the `evaluation` folder.
 ## 🔍 RAG Evaluation
 
 The RAG pipeline was evaluated against the ground truth dataset using the cosine similarity metric. The system achieved a cosine similarity score of **xyz**, reflecting strong alignment with the expected results. 
-
-![image](https://github.com/user-attachments/assets/4120dc26-6a43-4a3a-b2fe-e5ec5de7cb5a)
+ 
 
 
 ## 🖥️ User Interface
 
-The application features a simple and intuitive UI built with **Streamlit**. Users can easily input queries and view responses through a straightforward interface. 
-
-![image](https://github.com/user-attachments/assets/a62fdc48-2c3a-4560-9236-18c7fc52511d)
-
-![image](https://github.com/user-attachments/assets/35cdf80f-272c-4415-8ea6-1ddf30deb70e)
+The application features a simple and intuitive UI built with **Streamlit**. Users can easily input queries and view responses through a straightforward interface.  
 
 
 ## Monitoring Feedback and Containerization
