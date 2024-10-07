@@ -1,0 +1,12 @@
+elasticsearch==8.15.0 
+huggingface_hub
+ipykernel==6.29.5
+ipython==8.18.1
+langchain_community
+langchain_huggingface
+pandas==2.2.2 
+psycopg2-binary
+python-dotenv==1.0.1
+sentence-transformers==3.0.1 
+streamlit
+transformers==4.43.3

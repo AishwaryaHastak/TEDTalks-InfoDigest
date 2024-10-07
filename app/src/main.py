@@ -10,6 +10,9 @@ topic1 = 'global issues'
 query2 = "What did the speaker mean when he mentioned 'Courage calls to courage everywhere'"
 query3 = "What is Howard's notion of the Platonic dish?"
 topic3 = 'business'
+query4 = "Can only smart people achieve success?"
+title4 = '8 secrets of success'
 es.read_data()
+print(es.data_dict)
 es.create_index()
-print(es.get_response(query3,topic3))
+print(es.get_response(query4,title4))

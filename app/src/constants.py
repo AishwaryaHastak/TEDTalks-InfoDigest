@@ -16,9 +16,9 @@ keyword_fields=["title","speaker"]
 index_name = "ted-index"
 
 # Model Constants 
-# model_name = 'google/flan-t5-small' 
+model_name = 'google/flan-t5-small' 
 # model_name = "distilbert/distilgpt2"
-model_name = 'distilbert/distilbert-base-uncased-distilled-squad'
+# model_name = 'distilbert/distilbert-base-uncased-distilled-squad'
 embedding_model = 'multi-qa-MiniLM-L6-cos-v1'
 embedding_size = 128
 
@@ -35,3 +35,7 @@ DB_PORT = os.getenv('DB_PORT', '5432')  # Default to 5432 if not set
 
 # Construct the database URI
 DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+
+# Hugging Face API token key
+
+HF_API_TOKEN = os.getenv('HF_API_TOKEN')
