@@ -25,21 +25,17 @@ def load_talks_data(file_path):
     return df, sorted(all_topics)
 
 def summary_page(selected_talk):
-
-    st.subheader("Talk Summary")
     talk_summary = summarize(selected_talk)
-    st.write(talk_summary)  
+    return talk_summary
 
 def qa_page(selected_talk, pipeline):
-
-    st.subheader("Ask a Question")
+    st.header("Ask a Question")
     user_input = st.text_input("💬 Enter your question related to the talk:", "")
 
     if st.button("Ask"):
         st.session_state.conversation_id = str(uuid.uuid4())
         st.session_state.has_asked_question = True
-        
-        # pipeline =  ElSearchRAGPipeline() #VecSearchRAGPipeline() # 
+         
         with st.spinner("Processing..."):
             answer_data, time_taken, total_hits, relevance_score, topic = pipeline.get_response(user_input, selected_talk)
             st.success("Completed!")
@@ -54,13 +50,12 @@ def qa_page(selected_talk, pipeline):
                 total_hits, 
                 relevance_score,
                 topic,
-                "Text"  # Only using text search
+                selected_talk,
             )
 
 def main():
     st.set_page_config(page_title="Ted Talks Assistant", layout="wide")
     st.title("🌟 Ted Talks Assistant 🌟")
-
     # Initialize the database
     init_db()
 
@@ -92,7 +87,10 @@ def main():
         selected_talk = st.sidebar.selectbox("Choose a talk:", talk_titles)
         
         # Show the selected title and description
-        if selected_talk:
+        if selected_talk: 
+            speaker = filtered_talks[filtered_talks['title'] == selected_talk]['speaker'].values[0]
+            about_speaker = filtered_talks[filtered_talks['title'] == selected_talk]['about_speakers'].values[0]
+            st.sidebar.subheader(f"{speaker} - {selected_talk}")
             talk_description = filtered_talks[filtered_talks['title'] == selected_talk]['description'].values[0]
             st.sidebar.subheader("Talk Description:")
             st.sidebar.write(talk_description)
@@ -104,7 +102,7 @@ def main():
     page = st.sidebar.radio('',("Summary 📄", "Q&A ❓"))
 
     # Initialize the text search pipeline if not already done
-    pipeline =VecSearchRAGPipeline() #  ElSearchRAGPipeline() #
+    pipeline =  VecSearchRAGPipeline() # ElSearchRAGPipeline() #
     if not st.session_state.text_index_created and not st.session_state.indexing_in_progress:
         st.session_state.indexing_in_progress = True
         with st.spinner("Reading and indexing data..."):
@@ -117,7 +115,18 @@ def main():
     # Render the selected page
     if page == "Summary 📄":
         if selected_talk:
-            summary_page(selected_talk)
+            st.markdown("---")  
+            st.markdown('### "{}" by {}'.format(selected_talk, speaker))
+            st.markdown("<br>", unsafe_allow_html=True) 
+            # Speaker Information
+            st.subheader("About the Speaker")  
+            st.markdown(f'##### {about_speaker}') 
+
+            # Talk Description
+            st.markdown("---")  
+            st.subheader("Summary")
+            talk_summary = summary_page(selected_talk)
+            st.write(talk_summary)
         else:
             st.warning("Please select a talk to view the summary.")
 
