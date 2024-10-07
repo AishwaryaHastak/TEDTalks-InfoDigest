@@ -2,7 +2,7 @@
 
 import os
 import pandas as pd 
-from elasticsearch import Elasticsearch 
+from elasticsearch import Elasticsearch , helpers
 from tqdm import tqdm  
 from langchain_huggingface import HuggingFaceEndpoint
 from src.constants import model_name,index_name, HF_API_TOKEN
@@ -14,8 +14,8 @@ class ElSearchRAGPipeline:
     def __init__(self): 
         self.query = None
         self.response = None 
-        # self.es = Elasticsearch("http://elasticsearch:9200") 
-        self.es = Elasticsearch("http://localhost:9200") 
+        self.es = Elasticsearch("http://elasticsearch:9200") 
+        # self.es = Elasticsearch("http://localhost:9200") 
         self.data_dict = None
 
     def read_data(self):
@@ -45,9 +45,7 @@ class ElSearchRAGPipeline:
                 "properties": {
                     "transcript": {"type": "text"},
                     "topics": {"type": "text"},
-                    "speaker": {"type": "text"},
-                    "about_speakers": {"type": "text"},
-                    "description": {"type": "text"},
+                    "speaker": {"type": "text"}, 
                     "title": {"type": "keyword"},
                     "id": {"type": "keyword"},
             }
@@ -58,11 +56,16 @@ class ElSearchRAGPipeline:
         self.es.indices.create(index=index_name, mappings=mappings)
 
         # Add Data to Index using index()
-        print('\n\n[[DEBUG] Adding data to index...') 
-        for i in tqdm(range(len(self.data_dict))):
-            row = self.data_dict[i]
-            # self.es.index(index=index_name, document=row) 
-            self.es.index(index=index_name, id=row['id'], document=row) 
+        print('\n\n[[DEBUG] Adding data to index...')   
+        actions = [
+            {
+                "_index": index_name,
+                "_id": i,
+                "_source": row
+            }
+            for i, row in enumerate(self.data_dict)
+        ]
+        helpers.bulk(self.es, actions)
 
     def search(self, query, title, num_results=3):
         """
@@ -78,9 +81,6 @@ class ElSearchRAGPipeline:
         """
         # Retrieve Search Results
         print('\n\n[[DEBUG] Retrieving Search Results...') 
-        print('\n title:', title.strip())
-        # title = 'Why we love, why we cheat'
-        # filtered_results = self.es.search(
         results = self.es.search(
             index=index_name,
             size = num_results,
@@ -89,7 +89,7 @@ class ElSearchRAGPipeline:
                         "must": {
                             "multi_match": {
                                 "query": query,
-                                "fields": ["transcript^3", "topics" ,"speaker","description", "about_speaker"],
+                                "fields": ["transcript^3", "topics" ,"speaker"],
                                 "type": "best_fields",
                             }
                         }, 
@@ -109,6 +109,7 @@ class ElSearchRAGPipeline:
 
         print('\n\n[DEBUG] Retrieved results:', time_taken, relevance_score, total_hits)
         result_docs = [hit['_source'] for hit in results['hits']['hits']] 
+        print('\n\n[DEBUG] result_docs:', result_docs)
 
         response = [result['transcript'] for result in result_docs]
  
@@ -135,8 +136,7 @@ class ElSearchRAGPipeline:
         Provide a clear and insightful answer.
         """.strip()
 
-        prompt = prompt_template.format(question=query, response=response)
-        print('\n\n Prompt: ', prompt)
+        prompt = prompt_template.format(question=query, response=response) 
         return prompt
     
     def generate_response(self, prompt): 
@@ -152,7 +152,7 @@ class ElSearchRAGPipeline:
 
         print('[DEBUG] Generating LLM response...')
 
-        repo_id = "mistralai/Mistral-7B-Instruct-v0.2"
+        repo_id = "mistralai/Mistral-7B-Instruct-v0.3"
 
         llm = HuggingFaceEndpoint(
             repo_id=repo_id,
@@ -177,7 +177,6 @@ class ElSearchRAGPipeline:
             str: The generated response from the LLM.
         """ 
         results, time_taken, total_hits, relevance_score, topic = self.search(query,selected_talk, num_results)
-        prompt = self.generate_prompt(query, results)
-        # llm_response = self.generate_response(query, results)
+        prompt = self.generate_prompt(query, results) 
         llm_response = self.generate_response(prompt)
         return llm_response, time_taken, total_hits, relevance_score, topic

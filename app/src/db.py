@@ -3,12 +3,13 @@
 
 import psycopg2
 import os
-from src.constants import DATABASE_URI 
+from src.constants import DATABASE_URI, DB_PASSWORD, DB_NAME, DB_USER, DB_HOST
 
 def init_db():
     """Initialize the PostgreSQL database with necessary tables."""
-    print('[DEBUG] Initializing database...')
 
+    print('[DEBUG] Initializing database...')
+    
     with psycopg2.connect(DATABASE_URI) as conn:
         with conn.cursor() as cursor:
             # cursor.execute("DROP TABLE IF EXISTS feedback")
@@ -23,7 +24,7 @@ def init_db():
                     total_hits INT,
                     relevance_score FLOAT,   
                     topic TEXT,
-                    search_type TEXT,
+                    selected_talk TEXT,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')        
@@ -41,13 +42,13 @@ def init_db():
             
             conn.commit()
 
-def save_conversation(conversation_id, question, answer, time_taken, total_hits, relevance_score, topic, search_type):
+def save_conversation(conversation_id, question, answer, time_taken, total_hits, relevance_score, topic, selected_talk):
     """Save a conversation to the database."""
     with psycopg2.connect(DATABASE_URI) as conn:
         with conn.cursor() as cursor: 
             cursor.execute('''
-                INSERT INTO conversations (id, question, answer, time_taken, total_hits, relevance_score, topic, search_type) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (conversation_id, question, answer, time_taken, total_hits, relevance_score, topic, search_type))
+                INSERT INTO conversations (id, question, answer, time_taken, total_hits, relevance_score, topic, selected_talk) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (conversation_id, question, answer, time_taken, total_hits, relevance_score, topic, selected_talk))
             conn.commit()
             print('[DEBUG] Conversation saved to database.')
 

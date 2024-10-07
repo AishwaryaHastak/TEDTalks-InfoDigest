@@ -2,47 +2,59 @@
 
 import os
 import pandas as pd
-from elasticsearch import Elasticsearch
-from tqdm import tqdm
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-from src.constants import model_name,index_name, embedding_model, embedding_size
-# from constants import model_name,index_name, embedding_model, embedding_size
-from sentence_transformers import SentenceTransformer
+import requests
+from elasticsearch import Elasticsearch, helpers
+from langchain_huggingface import HuggingFaceEndpoint
+from tqdm import tqdm 
+from src.constants import model_name,index_name, embedding_size, HF_API_TOKEN
+# from constants import model_name,index_name, embedding_model, embedding_size, HF_API_TOKEN 
+from langchain.embeddings import HuggingFaceInferenceAPIEmbeddings
 
 class VecSearchRAGPipeline:
     def __init__(self): 
         self.query = None
-        self.response = None
-        self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name)
-        # self.es = Elasticsearch("http://elasticsearch:9200")
-        self.es = Elasticsearch("http://localhost:9200")
-        self.emb_model = SentenceTransformer(embedding_model,truncate_dim=embedding_size) 
+        self.response = None 
+        self.es = Elasticsearch("http://elasticsearch:9200")
+        # self.es = Elasticsearch("http://localhost:9200") 
+        self.emb_model = HuggingFaceInferenceAPIEmbeddings(
+                    api_key=HF_API_TOKEN, 
+                    model_name="sentence-transformers/all-MiniLM-l6-v2"
+                )
         self.data_dict = None
 
-    def read_data(self):
+    def get_embeddings_batch(self, texts):
+        """
+        Generates embedding vectors for a batch of texts using the Hugging Face endpoint.
+        """
+        data = self.emb_model.embed_documents(texts)[:embedding_size]
+        return data 
+
+    def read_data(self, batch_size=64):
         """
         Reads data from csv file and converts it into list of dictionaries.
         Additionally, generates vector embeddings for the question and answer
         using the SentenceTransformer model and adds them to the dictionary.
         """
         
-        print('[DEBUG] Reading data...')
+        print('\n\n [DEBUG] Reading data...')
         # Read data into dataframe 
-        # data_file_path = os.path.join('data', 'data.csv')
-        data_file_path = os.path.join('..','data', 'chunked_data.csv')
+        data_file_path = os.path.join('data', 'chunked_data.csv') 
         df = pd.read_csv(data_file_path).dropna()
 
         # Convert dataframe to list of dictionaries
         data_dict = df.to_dict(orient="records")
 
-        print('[DEBUG] Generating vector embeddings...')
+        print('\n\n [DEBUG] Generating vector embeddings...') 
         # Add answer and question vector embeddings
-        vector_data_dict = []
-        for data in tqdm(data_dict):
-            title_transcript = data['title'] + ' ' + data['transcript']
-            data['title_transcript_vector'] = self.emb_model.encode(title_transcript)
-            vector_data_dict.append(data)
+        vector_data_dict = []  
+        for i in tqdm(range(0, len(data_dict), batch_size)):
+            batch = data_dict[i:i + batch_size]
+            texts = [f"{data['title']} {data['transcript']}" for data in batch]
+            embeddings = self.get_embeddings_batch(texts)
+            
+            for j, data in enumerate(batch):
+                data['title_transcript_vector'] = embeddings[j][:embedding_size]
+                vector_data_dict.append(data) 
         self.data_dict = vector_data_dict
     
     def create_index(self):
@@ -76,14 +88,18 @@ class VecSearchRAGPipeline:
         self.es.indices.create(index=index_name, body = index_settings)
 
         # Add Data to Index using index()
-        print('\n\n[[DEBUG] Adding data to index...')
-        for i in tqdm(range(len(self.data_dict))):
-            row = self.data_dict[i]
-            self.es.index(index=index_name, id=i, document=row)
+        print('\n\n[[DEBUG] Adding data to index...') 
+        actions = [
+            {
+                "_index": index_name,
+                "_id": i,
+                "_source": row
+            }
+            for i, row in enumerate(self.data_dict)
+        ]
+        helpers.bulk(self.es, actions)
 
-        # helpers.bulk(es, data_dict)
-
-    def search(self, query, num_results):
+    def search(self, query, selected_talk, num_results):
         """
         Retrieves results from the index based on the query.
 
@@ -94,26 +110,28 @@ class VecSearchRAGPipeline:
         Returns:
             list of str: List of results matching the search criteria, ranked by relevance.
         """
+
         # Retrieve Search Results
         print('\n\n[[DEBUG] Retrieving Search Results...') 
-        query_vector = self.emb_model.encode(query)
+        query_vector = self.emb_model.embed_query(selected_talk+query)[:embedding_size]
+        
         knn_query = {
-            "field": "question_answer_vector",
+            "field": "title_transcript_vector",
             "query_vector": query_vector,
             "k": num_results,
-            "num_candidates": 5
+            "num_candidates": 50
         }
+        print('\n\n[[DEBUG] knn_query: ', knn_query)
 
         results = self.es.search(index=index_name, knn=knn_query, size = num_results)
 
         time_taken = results['took']
         relevance_score = results['hits']['max_score']
         total_hits = results['hits']['total']['value']
-        topics = results['hits']['hits'][0]['_source']['topics']
-        title = results['hits']['hits'][0]['_source']['title']
+        topics = results['hits']['hits'][0]['_source']['topics'] 
         result_docs = [hit['_source'] for hit in results['hits']['hits']] 
 
-        response = [result['answer'] for result in result_docs]
+        response = [result['transcript'] for result in result_docs]
  
         return response, time_taken, relevance_score, total_hits, topics
     
@@ -130,12 +148,12 @@ class VecSearchRAGPipeline:
         """
 
         prompt_template = """
-        You are a TED Talks Summary and Q&A Assistant. 
-        Answer the question using the context below, summarizing and rephrasing the information instead of quoting it directly.
+        You are a TED Talks Q&A Assistant. 
+        Answer the question about the talks using the speaker's transcript of the talk below, summarizing what the speaker meant to say.
         QUESTION: {question}
         CONTEXT: 
         {response}
-        Provide a clear and insightful explanation.
+        Provide a clear and insightful answer.
         """.strip()
 
         prompt = prompt_template.format(question=query, response=response)
@@ -152,31 +170,20 @@ class VecSearchRAGPipeline:
             str: The generated response from the LLM.
         """
 
-        print('[DEBUG] Generating LLM response...')
-        inputs = self.tokenizer(
-            prompt, 
-            return_tensors="pt", 
-            max_length=512, 
-            truncation=True, 
-            padding='max_length'
-        )
+        print('[DEBUG] Generating LLM response...') 
+        
+        repo_id = "mistralai/Mistral-7B-Instruct-v0.2"
 
-        # Generate Response
-        outputs = self.model.generate(
-            **inputs,
-            max_new_tokens=1024,
-            min_length=100,
-            no_repeat_ngram_size=3,
-            do_sample=True, 
-            num_beams=4,        
-            early_stopping = True # Stop once all beams are finished  
-        )
-        
-        llm_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
+        llm = HuggingFaceEndpoint(
+            repo_id=repo_id,
+            max_length=128,
+            temperature=0.5,
+            huggingfacehub_api_token=HF_API_TOKEN,
+        ) 
+        llm_response = llm.invoke(prompt) 
         return llm_response
     
-    def get_response(self,query, num_results=3):
+    def get_response(self,query, selected_talk, num_results=3):
         """
         Retrieves and generates a response for a given query.
 
@@ -187,7 +194,7 @@ class VecSearchRAGPipeline:
         Returns:
             str: The generated response from the LLM.
         """ 
-        results, time_taken, total_hits, relevance_score, topic  = self.search(query, num_results)
+        results, time_taken, total_hits, relevance_score, topic  = self.search(query, selected_talk, num_results)
         prompt = self.generate_prompt(query, results)
         llm_response = self.generate_response(prompt)
         return llm_response, time_taken, total_hits, relevance_score , topic
