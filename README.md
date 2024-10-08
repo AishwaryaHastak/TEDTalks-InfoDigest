@@ -59,7 +59,8 @@ User feedback is collected via the UI's thumbs-up👍 and thumbs-down👎 button
 
 A dashboard was created on **Grafana** to analyze the data.
 
-![image](https://github.com/user-attachments/assets/e4b8d943-7e45-4fce-8d81-b5bad15adb1e)
+![image](https://github.com/user-attachments/assets/2b05fc4a-c267-418d-83d4-fff47aca276e)
+
 
 
 ## How to run this code
