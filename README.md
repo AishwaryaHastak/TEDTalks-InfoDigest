@@ -67,7 +67,7 @@ A dashboard was created on **Grafana** to analyze the data.
 
 1. clone the repository to your local machine:
 ```bash
-git clone https://github.com/AishwaryaHastak/ted_rag.git
+git clone https://github.com/AishwaryaHastak/TEDTalks-InfoDigest.git
 ```
 
 2. Navigate to the Project Directory
