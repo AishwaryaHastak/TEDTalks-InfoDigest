@@ -16,9 +16,8 @@ def print_log(message):
     print(message, flush=True)
 
 def load_talks_data(file_path):
-    """Load the talks data from a CSV file and return a mapping of topics to titles."""
     df = pd.read_csv(file_path)
-    df['topics'] = df['topics'].apply(lambda x: eval(x))  # Assuming topics are stored as a list string
+    df['topics'] = df['topics'].apply(lambda x: eval(x))
     all_topics = set()
     for topics in df['topics']:
         all_topics.update(topics)
@@ -32,16 +31,15 @@ def qa_page(selected_talk, pipeline):
     st.header("Ask a Question")
     user_input = st.text_input("💬 Enter your question related to the talk:", "")
 
-    if st.button("Ask"):
+    if st.button("Ask", key="ask_button"):
         st.session_state.conversation_id = str(uuid.uuid4())
         st.session_state.has_asked_question = True
          
         with st.spinner("Processing..."):
             answer_data, time_taken, total_hits, relevance_score, topic = pipeline.get_response(user_input, selected_talk)
             st.success("Completed!")
-            st.write(answer_data)
+            st.markdown(f"**Answer:** {answer_data}")
 
-            # Save conversation to database
             save_conversation(
                 st.session_state.conversation_id, 
                 user_input, 
@@ -55,54 +53,62 @@ def qa_page(selected_talk, pipeline):
 
 def main():
     st.set_page_config(page_title="Ted Talks Assistant", layout="wide")
-    st.title("🌟 Ted Talks Assistant 🌟")
-    # Initialize the database
+    st.markdown("""
+    <style>
+    .big-font {
+        font-size:50px !important;
+        font-weight: bold;
+        color: #FF4B4B;
+    }
+    .stButton>button {
+        background-color: #FF4B4B;
+        color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<p class="big-font">Ted Talks Assistant</p>', unsafe_allow_html=True)
+
     init_db()
 
-    # Load the talks data
     talks_data_path = 'data/topk_cleaned_data.csv'
     df, unique_topics = load_talks_data(talks_data_path)
 
-    # Check if the text index has been created
     if "text_index_created" not in st.session_state:
         st.session_state.text_index_created = False
     if "indexing_in_progress" not in st.session_state:
-        st.session_state.indexing_in_progress = False  # Flag for indexing status
+        st.session_state.indexing_in_progress = False
     if "has_asked_question" not in st.session_state:
-        st.session_state.has_asked_question = False  # Track if user has asked a question
+        st.session_state.has_asked_question = False
 
-    # Sidebar for multiple topic selection
-    st.sidebar.header("Select Topics")
-    selected_topics = st.sidebar.multiselect("Choose topics:", unique_topics)
-    
-    # Display corresponding talk titles based on selected topics
-    st.sidebar.subheader("Available Talks")
-    selected_talk = None
-    talk_description = ""
-    
-    if selected_topics:
-        filtered_talks = df[df['topics'].apply(lambda topics: any(topic in topics for topic in selected_topics))]
-        talk_titles = filtered_talks['title'].tolist()
+    with st.sidebar:
+        st.header("🎯 Select Topics")
+        selected_topics = st.multiselect("Choose topics:", unique_topics)
         
-        selected_talk = st.sidebar.selectbox("Choose a talk:", talk_titles)
+        st.header("📚 Available Talks")
+        selected_talk = None
+        talk_description = ""
         
-        # Show the selected title and description
-        if selected_talk: 
-            speaker = filtered_talks[filtered_talks['title'] == selected_talk]['speaker'].values[0]
-            about_speaker = filtered_talks[filtered_talks['title'] == selected_talk]['about_speakers'].values[0]
-            st.sidebar.subheader(f"{speaker} - {selected_talk}")
-            talk_description = filtered_talks[filtered_talks['title'] == selected_talk]['description'].values[0]
-            st.sidebar.subheader("Talk Description:")
-            st.sidebar.write(talk_description)
-    else:
-        st.sidebar.write("Please select at least one topic to see available talks.")
+        if selected_topics:
+            filtered_talks = df[df['topics'].apply(lambda topics: any(topic in topics for topic in selected_topics))]
+            talk_titles = filtered_talks['title'].tolist()
+            
+            selected_talk = st.selectbox("Choose a talk:", talk_titles)
+            
+            if selected_talk: 
+                speaker = filtered_talks[filtered_talks['title'] == selected_talk]['speaker'].values[0]
+                about_speaker = filtered_talks[filtered_talks['title'] == selected_talk]['about_speakers'].values[0]
+                st.subheader(f"{speaker} - {selected_talk}")
+                talk_description = filtered_talks[filtered_talks['title'] == selected_talk]['description'].values[0]
+                st.markdown("**Talk Description:**")
+                st.info(talk_description)
+        else:
+            st.warning("Please select at least one topic to see available talks.")
 
-    # Select the page with nicer formatting
-    st.sidebar.header("Page Navigation")
-    page = st.sidebar.radio('',("Summary 📄", "Q&A ❓"))
+        st.header("📑 Page Navigation")
+        page = st.radio('',("Summary 📄", "Q&A ❓"))
 
-    # Initialize the text search pipeline if not already done
-    pipeline =  VecSearchRAGPipeline() # ElSearchRAGPipeline() #
+    pipeline = VecSearchRAGPipeline()
     if not st.session_state.text_index_created and not st.session_state.indexing_in_progress:
         st.session_state.indexing_in_progress = True
         with st.spinner("Reading and indexing data..."):
@@ -112,17 +118,14 @@ def main():
             st.session_state.indexing_in_progress = False
         st.success("Text index created!")
 
-    # Render the selected page
     if page == "Summary 📄":
         if selected_talk:
             st.markdown("---")  
-            st.markdown('### "{}" by {}'.format(selected_talk, speaker))
+            st.markdown(f'### "{selected_talk}" by {speaker}')
             st.markdown("<br>", unsafe_allow_html=True) 
-            # Speaker Information
             st.subheader("About the Speaker")  
-            st.markdown(f'##### {about_speaker}') 
+            st.info(about_speaker)
 
-            # Talk Description
             st.markdown("---")  
             st.subheader("Summary")
             talk_summary = summary_page(selected_talk)
@@ -133,35 +136,36 @@ def main():
     elif page == "Q&A ❓":
         if selected_talk:
             qa_page(selected_talk, pipeline=pipeline)
-            # Feedback section: only show if a question has been asked
             if st.session_state.has_asked_question:
                 st.subheader("Feedback")
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button('👍'):
+                    if st.button('👍 Helpful'):
                         save_feedback(st.session_state.conversation_id, 1)
                         st.success('Thank you for the positive feedback!')
                 with col2:
-                    if st.button('👎'):
+                    if st.button('👎 Not Helpful'):
                         save_feedback(st.session_state.conversation_id, -1)
                         st.error('Sorry to hear that. We appreciate your feedback!')
         else:
             st.warning("Please select a talk to ask questions.")
 
-        # Display recent conversations
+        st.markdown("---")
         st.subheader("Recent Conversations")
         recent_conversations = get_recent_conversations(limit=3)
         for conv in recent_conversations:
-            st.write(f"**Q:** {conv['question']}")
-            st.write(f"**A:** {conv['answer']}")
-            st.write("---")
+            st.markdown(f"**Q:** {conv['question']}")
+            st.markdown(f"**A:** {conv['answer']}")
+            st.markdown("---")
 
-        # Display feedback stats
         feedback_stats = get_feedback_stats()
         st.subheader("Feedback Statistics")
-        st.write(f"👍 Thumbs up: {feedback_stats['thumbs_up']}")
-        st.write(f"👎 Thumbs down: {feedback_stats['thumbs_down']}")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("👍 Helpful", feedback_stats['thumbs_up'])
+        with col2:
+            st.metric("👎 Not Helpful", feedback_stats['thumbs_down'])
 
 if __name__ == "__main__":
-    print_log("Course Assistant application started")
+    print_log("Ted Talks Assistant application started")
     main()
