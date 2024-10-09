@@ -6,9 +6,24 @@ The application utilizes tools like ElasticSearch, Streamlit, PostgreSQL, Grafan
  
 ![TED_assistant_Diagram](https://github.com/user-attachments/assets/c58f2016-2b95-4664-bd71-3208beffd86f)
 
-
-
 ### 🔍📝👉 To learn more about RAGs, check out this [article](https://medium.com/@aishwaryahastak/understanding-the-roots-of-rags-7b77d26c3dca).
+
+# Ted Talks Explorer Application
+
+## Table of Contents
+- [Project Overview](#project-overview)
+- [RAG Flow](#rag-flow)
+- [Retrieval Evaluation](#retrieval-evaluation)
+- [RAG Evaluation](#rag-evaluation)
+- [User Interface](#user-interface)
+- [Monitoring Feedback and Containerization](#monitoring-feedback-and-containerization)
+- [How to run this code](#how-to-run-this-code)
+- [Acknowledgements](#acknowledgements)
+
+## Project Demo
+https://github.com/user-attachments/assets/fe88eb0e-e432-48d0-9def-abfee7e8a568
+
+
 
 ## 📈Project Overview
 
