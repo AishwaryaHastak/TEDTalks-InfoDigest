@@ -21,7 +21,10 @@ The application utilizes tools like ElasticSearch, Streamlit, PostgreSQL, Grafan
 - [Acknowledgements](#acknowledgements)
 
 ## Project Demo
-https://github.com/user-attachments/assets/fe88eb0e-e432-48d0-9def-abfee7e8a568
+
+
+https://github.com/user-attachments/assets/61ea8f39-5e30-417e-9266-4cd5c707ab84
+
 
 
 
