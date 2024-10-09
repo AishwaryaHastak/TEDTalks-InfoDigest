@@ -8,7 +8,6 @@ The application utilizes tools like ElasticSearch, Streamlit, PostgreSQL, Grafan
 
 ### 🔍📝👉 To learn more about RAGs, check out this [article](https://medium.com/@aishwaryahastak/understanding-the-roots-of-rags-7b77d26c3dca).
 
-# Ted Talks Explorer Application
 
 ## Table of Contents
 - [Project Overview](#project-overview)
