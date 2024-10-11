@@ -1,4 +1,4 @@
-# Ted Talks Explorer Application
+# Ted Talks Retrieval-Augmented Application
 
 Ted Talks are a source of profound knowledge and opinions delivered in an engaging manner by experts. This project provides answers and summaries of the most viewed Ted Talks since 2006, offering an easy-to-use interface for insights and quick summaries.🚀
 
@@ -109,6 +109,12 @@ docker-compose up -d
 http://localhost:8501
 ```
 ---
+
+## To Do
+
+- [ ] Integrate a vector database
+- [ ] Try advanced indexing techniques
+- [ ] Deploy on cloud
 
 ## Acknowledgements
 
