@@ -78,7 +78,9 @@ A dashboard was created on **Grafana** to analyze the data.
 
 ![image](https://github.com/user-attachments/assets/2b05fc4a-c267-418d-83d4-fff47aca276e)
 
-
+### Insights
+- **Response Time and Length Correlation**: There is a clear linear relationship between the response length and response time, indicating that longer responses take more time to retrieve.
+- **Distribution of Topics in Questions Asked**: 'Business' is the most frequently addressed topic (13%), followed by 'society' (10%) and 'culture' (10%).
 
 ## How to run this code
 
@@ -113,6 +115,7 @@ http://localhost:8501
 ## To Do
 
 - [ ] Integrate a vector database
+- [ ] Improve search performance
 - [ ] Try advanced indexing techniques
 - [ ] Deploy on cloud
 
